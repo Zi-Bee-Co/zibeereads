@@ -288,6 +288,18 @@ hr.div{border:none;border-top:1px solid var(–border);margin:20px 0;}
 .verify-icon{font-size:56px;margin-bottom:16px;}
 .verify-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:#F5A800;margin-bottom:10px;}
 .verify-sub{font-size:14px;color:rgba(255,255,255,0.65);line-height:1.7;margin-bottom:24px;}
+
+/* Recommendation cards */
+.rec-note{font-size:13px;line-height:1.6;color:#fde68a;background:rgba(245,158,11,.1);border:1px dashed rgba(245,158,11,.35);border-radius:12px;padding:10px 14px;margin-bottom:14px;}
+.rec-intro{font-size:14px;line-height:1.7;color:rgba(255,255,255,.85);margin-bottom:14px;}
+.rec-list{display:flex;flex-direction:column;gap:12px;}
+.rec-card{display:flex;gap:14px;align-items:flex-start;background:rgba(255,255,255,.05);border:1px solid rgba(245,158,11,.25);border-radius:14px;padding:14px;}
+.rec-num{flex:0 0 30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);color:#1c0a00;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;}
+.rec-body{flex:1;min-width:0;}
+.rec-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;line-height:1.3;color:#ffffbb;}
+.rec-author{font-size:12px;font-weight:700;color:#f59e0b;margin-top:2px;}
+.rec-why{font-size:13px;line-height:1.55;color:rgba(255,255,255,.82);margin-top:6px;}
+.rec-get{display:inline-block;margin-top:10px;background:#E7E7E9;color:#1c0a00;font-weight:800;font-size:12px;padding:7px 16px;border-radius:20px;text-decoration:none;}
 </style>
 
 </head>
@@ -784,7 +796,7 @@ hr.div{border:none;border-top:1px solid var(–border);margin:20px 0;}
 ```
 <div class="about-section">
   <h3>1. Who We Are</h3>
-  <p>Zi-Bee Reads ("we", "us", "our") is a free web application accessible at zibeereads.github.io/zibeereads. We are committed to protecting your personal information and your right to privacy.</p>
+  <p>Zi-Bee Reads ("we", "us", "our") is a free web application accessible at zi-bee-co.github.io/zibeereads. We are committed to protecting your personal information and your right to privacy.</p>
 </div>
 
 <div class="about-section">
@@ -1548,20 +1560,20 @@ function shareRecs(){
   if(!out) return;
   // Extract text from the output
   const titles = [];
-  out.querySelectorAll('td div:first-child').forEach(el=>{
-    const t = el.textContent.replace('📖','').trim();
+  out.querySelectorAll('.rec-title').forEach(el=>{
+    const t = el.textContent.trim();
     if(t) titles.push(t);
   });
   const text = titles.length
-    ? 'My Zi-Bee Reads picks:\n\n' + titles.map((t,i)=>`${i+1}. ${t}`).join('\n') + '\n\nFind your perfect book 📚\nzibeereads.github.io/zibeereads'
-    : 'Check out Zi-Bee Reads — free AI book recommendations! 📚\nzibeereads.github.io/zibeereads';
+    ? 'My Zi-Bee Reads picks:\n\n' + titles.map((t,i)=>`${i+1}. ${t}`).join('\n') + '\n\nFind your perfect book 📚\nzi-bee-co.github.io/zibeereads'
+    : 'Check out Zi-Bee Reads — free AI book recommendations! 📚\nzi-bee-co.github.io/zibeereads';
   if(navigator.share){
-    navigator.share({title:'My Zi-Bee Reads Picks',text,url:'https://zibeereads.github.io/zibeereads'}).catch(()=>{});
+    navigator.share({title:'My Zi-Bee Reads Picks',text,url:'https://zi-bee-co.github.io/zibeereads'}).catch(()=>{});
   } else {
     navigator.clipboard.writeText(text).then(()=>{
       alert('Picks copied to clipboard! Paste and share 📚');
     }).catch(()=>{
-      alert('Share: zibeereads.github.io/zibeereads');
+      alert('Share: zi-bee-co.github.io/zibeereads');
     });
   }
 }
@@ -2071,6 +2083,50 @@ function selRec(type,el,val){
   recSel[type]=val;
   document.getElementById('recBtn').disabled=!(recSel.age&&recSel.genre&&recSel.mood);
 }
+function recEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function recAgeBucket(a){var n=parseInt(a,10);if(isNaN(n))return 'adult';return n<=12?'kids':(n<=17?'teen':'adult');}
+
+// Backup: if the AI helper is busy, pick 5 books from our own shelf.
+function recLocalPicks(){
+  var bucket=recAgeBucket(recSel.age);
+  var want=[recSel.genre,recSel.mood].filter(Boolean).map(function(x){return String(x).toLowerCase();});
+  var seen={},pool=[];
+  PICKS.forEach(function(p){
+    var key=(p.title||'').toLowerCase();
+    if(!key||seen[key])return;
+    seen[key]=1;
+    var tags=(p.tags||[]).map(function(t){return String(t).trim();}).filter(Boolean);
+    var score=(p.age===bucket)?100:0;
+    tags.forEach(function(t){var tl=t.toLowerCase();want.forEach(function(w){if(tl.indexOf(w)>-1||w.indexOf(tl)>-1)score+=5;});});
+    var url=[p.kindle,p.paperback,p.Hardcover,p.hardcover,p.audiobook].filter(function(u){return u&&/^https?:/.test(u);})[0]||'';
+    pool.push({title:p.title,author:p.author,why:tags.join(' · '),url:url,score:score,r:Math.random()});
+  });
+  pool.sort(function(x,y){return y.score-x.score||x.r-y.r;});
+  return pool.slice(0,5);
+}
+
+function recRender(out,L,intro,books,note){
+  var html='<h3>'+L.rec_your+'</h3>';
+  if(note)html+='<p class="rec-note">'+recEsc(note)+'</p>';
+  if(intro)html+='<p class="rec-intro">'+recEsc(intro)+'</p>';
+  html+='<div class="rec-list">';
+  books.forEach(function(b,i){
+    var link=b.url||('https://www.amazon.com/s?k='+encodeURIComponent((b.title+' '+(b.author||'')).trim()));
+    html+='<div class="rec-card"><div class="rec-num">'+(i+1)+'</div><div class="rec-body">'
+      +'<div class="rec-title">'+recEsc(b.title)+'</div>'
+      +(b.author?'<div class="rec-author">'+recEsc(b.author)+'</div>':'')
+      +(b.why?'<div class="rec-why">'+recEsc(b.why)+'</div>':'')
+      +'<a class="rec-get" href="'+recEsc(link)+'" target="_blank" rel="noopener">Get Book</a>'
+      +'</div></div>';
+  });
+  html+='</div>'+`<div style="text-align:center;margin-top:20px;">
+      <button onclick="shareRecs()" style="display:inline-flex;align-items:center;gap:8px;background:rgba(245,158,11,0.12);border:1.5px solid rgba(245,158,11,0.4);color:#F5A800;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;padding:12px 28px;border-radius:50px;cursor:pointer;transition:all .2s;">
+        📤 Share These Picks
+      </button>
+    </div>`;
+  out.innerHTML=html;
+}
+
 async function getRecommendation(){
   const btn=document.getElementById('recBtn');
   const box=document.getElementById('recResult');
@@ -2080,9 +2136,12 @@ async function getRecommendation(){
   box.style.display='block';
   const L=T[lang]||T.en;
   out.innerHTML=`<div class="loading"><span></span><span></span><span></span></div><p style="color:var(--muted);margin-top:8px">${L.rec_searching}</p>`;
+  const ctrl=new AbortController();
+  const timer=setTimeout(function(){ctrl.abort();},50000);
   try{
     const r=await fetch("https://qixuqrjmxwcsyvriyjsz.supabase.co/functions/v1/zibeereads",{
       method:"POST",
+      signal:ctrl.signal,
       headers:{
         "Content-Type":"application/json",
         "Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpeHVxcmpteHdjc3l2cml5anN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTEyMTQsImV4cCI6MjA5NDE2NzIxNH0.fysRmOQAhJIrQrlEUH8dndpBfcoYIInvU3XT4wclJ0g",
@@ -2096,57 +2155,30 @@ async function getRecommendation(){
         language:recLang
       })
     });
-    const raw=await r.text();
-    if(!r.ok){
-      out.innerHTML=`<p style="color:#f87171">Error ${r.status}: ${raw}</p>`;
-      btn.disabled=false;
-      return;
+    if(!r.ok)throw new Error('server '+r.status);
+    const d=await r.json();
+    let books=Array.isArray(d.books)?d.books.filter(function(b){return b&&b.title;}):[];
+    let intro=d.intro||'';
+    if(!books.length&&d.text){
+      // older reply format: numbered lines
+      String(d.text).split('\n').forEach(function(line){
+        var m=line.trim().match(/^\d+[\)\.]\s*(.+?)\s+by\s+(.+?)\s+[–—-]\s+(.+)$/i);
+        if(m)books.push({title:m[1].replace(/\*\*/g,''),author:m[2],why:m[3]});
+      });
     }
-    let d;
-    try{d=JSON.parse(raw);}catch(e){
-      out.innerHTML=`<p style="color:#f87171">Invalid response: ${raw.slice(0,200)}</p>`;
-      btn.disabled=false;
-      return;
-    }
-    const text=d.text||'';
-    if(!text){
-      out.innerHTML=`<p style="color:#f87171">Empty response from server. Please try again.</p>`;
-      btn.disabled=false;
-      return;
-    }
-    const L2=T[lang]||T.en;
-    let html=`<h3>${L2.rec_your}</h3>`;
-    html+=`<table style="width:100%;border-collapse:collapse;margin-top:8px;">`;
-    text.split('\n').filter(l=>l.trim()).forEach(l=>{
-      if(/^\d[\)\.]/.test(l.trim())){
-        const parts=l.trim().split(' – ');
-        const titlePart = parts[0] || l.trim();
-        const descPart = parts.slice(1).join(' – ') || '';
-        // Extract clean title for Amazon search
-        const cleanTitle = titlePart.replace(/^\d+[\)\.]\s*/,'').trim();
-        const searchUrl = 'https://www.amazon.com/s?k='+encodeURIComponent(cleanTitle);
-        html+=`<tr style="border:1px solid rgba(245,158,11,0.2);border-radius:12px;">
-          <td style="padding:14px 16px;vertical-align:top;">
-            <div style="color:#F5A800;font-weight:800;font-size:14px;margin-bottom:6px;">${titlePart.replace(/\*\*/g,"")}</div>
-            <div style="color:rgba(255,255,255,0.85);font-size:13px;line-height:1.6;">${descPart}</div>
-          </td>
-          <td style="padding:14px 12px;vertical-align:middle;text-align:center;white-space:nowrap;">
-            <a href="${searchUrl}" target="_blank" style="display:inline-block;background:#E7E7E9;color:#1c0a00;font-weight:800;font-size:12px;padding:8px 14px;border-radius:20px;text-decoration:none;box-shadow:0 0 12px rgba(231,231,233,0.6),0 0 24px rgba(231,231,233,0.3);">Get Book</a>
-          </td>
-        </tr>`;
-      } else {
-        html+=`</table><p style="font-style:italic;color:var(--honey);margin-bottom:10px;margin-top:4px;">${l.trim()}</p><table style="width:100%;border-collapse:collapse;margin-top:4px;">`;
-      }
-    });
-    html+=`</table>
-    <div style="text-align:center;margin-top:20px;">
-      <button onclick="shareRecs()" style="display:inline-flex;align-items:center;gap:8px;background:rgba(245,158,11,0.12);border:1.5px solid rgba(245,158,11,0.4);color:#F5A800;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;padding:12px 28px;border-radius:50px;cursor:pointer;transition:all .2s;">
-        📤 Share These Picks
-      </button>
-    </div>`;
-    out.innerHTML=html;
+    if(!books.length)throw new Error('no books');
+    recRender(out,L,intro,books.slice(0,5),'');
   }catch(e){
-    out.innerHTML=`<p style="color:#f87171">Error: ${e.message}. Please try again.</p>`;
+    // Friendly backup: our own shelf, no scary error text.
+    var picks=[];
+    try{picks=recLocalPicks();}catch(_e){}
+    if(picks.length){
+      recRender(out,L,'',picks,L.rec_busy||"Our AI helper is busy right now, so here are picks from our own shelf. Try again in a minute for fresh AI matches ✨");
+    }else{
+      out.innerHTML='<h3>'+L.rec_your+'</h3><p class="rec-note">'+recEsc(L.rec_busy_short||"Recommendations are busy right now. Please try again in a moment 🐝")+'</p>';
+    }
+  }finally{
+    clearTimeout(timer);
   }
   btn.disabled=false;
 }
