@@ -2124,7 +2124,7 @@ async function getRecommendation(){
         const descPart = parts.slice(1).join(' – ') || '';
         // Extract clean title for Amazon search
         const cleanTitle = titlePart.replace(/^\d+[\)\.]\s*/,'').trim();
-        const searchUrl = 'https://www.amazon.com/s?k='+encodeURIComponent(cleanTitle)+'&tag=zibeereads-20';
+        const searchUrl = 'https://www.amazon.com/s?k='+encodeURIComponent(cleanTitle);
         html+=`<tr style="border:1px solid rgba(245,158,11,0.2);border-radius:12px;">
           <td style="padding:14px 16px;vertical-align:top;">
             <div style="color:#F5A800;font-weight:800;font-size:14px;margin-bottom:6px;">${titlePart.replace(/\*\*/g,"")}</div>
